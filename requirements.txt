@@ -1,0 +1,11 @@
+flask
+streamlit
+requests
+pandas
+matplotlib
+cohere
+python-dotenv
+sentence-transformers
+chromadb
+
+gti 

@@ -3,7 +3,6 @@ import pandas as pd
 def parse_csv(file):
     df = pd.read_csv(file)
 
-    # Ensure correct columns
     if not {"category", "amount"}.issubset(df.columns):
         raise ValueError("CSV must have 'category' and 'amount' columns")
 

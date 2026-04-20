@@ -49,7 +49,6 @@ def query_rag(query):
 
     docs = results["documents"][0]
 
-    # 🔥 boost relevant docs
     if intent == "rent":
         docs = [d for d in docs if "rent" in d.lower()] + docs
 

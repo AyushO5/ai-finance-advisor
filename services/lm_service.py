@@ -33,7 +33,6 @@ def get_ai_response(user_input):
     
     income = extract_income(user_input)
 
-    # 🧮 Step 2: Calculate budget
     if income:
         needs, wants, savings = calculate_budget(income)
 
@@ -47,8 +46,6 @@ Budget Breakdown:
         budget_section = "Budget Breakdown: Not enough data provided."
 
     
-
-    # 🧠 Step 3: Prompt
     context = query_rag(user_input)
 
     prompt = f"""

@@ -45,11 +45,11 @@ Rules:
 - Do NOT add extra headings
 
 """
-
+# chr(10) is used instead of \n inside the f-string to avoid syntax issues with backslashes
     response = co.chat(
         model="command-r-plus-08-2024",
         message=prompt,
-        temperature=0.4
+        temperature=0.4 # Low temperature for more consistent, structured output
     )
 
     return response.text.strip()

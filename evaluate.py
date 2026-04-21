@@ -3,7 +3,7 @@ import time
 
 
 API_URL = "http://127.0.0.1:5000/chat"
-DELAY = 1  # seconds (avoid rate limit)
+DELAY = 1  # seconds between requests to avoid hitting rate limits
 
 
 test_data = [
@@ -43,10 +43,12 @@ def get_response(question):
         return ""
 
 def check_correctness(response, keywords):
+    # A response is "correct" if it contains more than half the expected keywords
     matches = sum(1 for kw in keywords if kw.lower() in response)
     return matches >= (len(keywords) // 2 + 1)
 
 def check_hallucination(response, keywords):
+    # If none of the expected keywords appear at all, the response is likely hallucinated
     return not any(kw.lower() in response for kw in keywords)
 
 

@@ -9,6 +9,7 @@ def analyze_expenses(expenses):
 
         breakdown.append(f"{category}: ₹{amount} ({percentage:.1f}%)")
 
+        # Thresholds: >40% flags overspending, <10% flags underutilization
         if percentage > 40:
             insights.append(f"High spending on {category}")
         elif percentage < 10:

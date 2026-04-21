@@ -3,6 +3,7 @@ from routes.chat import chat_bp
 from routes.upload import upload_bp
 from services.rag_service import load_data
 
+# Load the financial knowledge base into ChromaDB before the app starts accepting requests
 load_data()
 
 app = Flask(__name__)
@@ -21,4 +22,4 @@ def home():
 if __name__ == "__main__":
     app.run(debug=True) 
 
-print(app.url_map)
+print(app.url_map) # Note: only reachable if app.run() exits (e.g. during testing)

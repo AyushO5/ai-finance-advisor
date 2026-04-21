@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Finance Advisor", page_icon="💰")
 
-
+# Custom CSS to pin the input bar to the bottom of the screen
 st.markdown("""
 <style>
             
@@ -60,7 +60,7 @@ st.markdown('<div class="main-content">', unsafe_allow_html=True)
 st.title("💰 AI Financial Advisor")
 st.subheader("💬 Chat with AI")
 
-
+# Persist chat history across reruns using session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -114,7 +114,7 @@ if submit:
             bot_reply = "Backend not reachable"
 
         st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-        st.rerun()
+        st.rerun()  # Re-render the page so the new messages show up immediately
 
 
     if uploaded_file:

@@ -8,18 +8,70 @@ load_dotenv()
 
 co = cohere.Client(os.getenv("COHERE_API_KEY"))
 
+# ---------------- 🚨 RULE-BASED OVERRIDE ---------------- #
+def rule_based_override(user_input):
+    text = user_input.lower()
+
+    # RENT RULE
+    if "rent" in text:
+        if "45" in text or "50" in text:
+            return """
+1. Summary:
+Spending above 40% of income on rent is risky.
+It can reduce your ability to save.
+
+2. Investment Suggestions:
+- Reduce rent by moving or sharing
+- Keep rent below 40% of income
+
+3. Risk Level:
+High. High rent limits savings.
+
+4. Action Steps:
+- Calculate rent-to-income ratio
+- Look for cheaper housing options
+- Cut unnecessary expenses
+
+5. Follow-up Question:
+What percentage of your income goes to rent?
+"""
+
+    # SAVING RULE
+    if "saving 10%" in text:
+        return """
+1. Summary:
+Saving 10% is below the recommended level.
+You should aim for at least 20%.
+
+2. Investment Suggestions:
+- Increase savings gradually to 20%
+- Automate monthly savings
+
+3. Risk Level:
+Medium. Low savings can affect future goals.
+
+4. Action Steps:
+- Track expenses
+- Cut unnecessary spending
+- Increase savings step by step
+
+5. Follow-up Question:
+Can you increase your savings to 15–20%?
+"""
+
+    return None
+
+
+# ---------------- 🧹 HELPERS ---------------- #
 def format_headings(text):
-    # Cohere sometimes returns markdown-style headings (##); normalize them to numbered format
     text = text.replace("## Summary", "1. Summary")
     text = text.replace("## Investment Suggestions", "2. Investment Suggestions")
     text = text.replace("## Risk Level", "3. Risk Level")
     text = text.replace("## Action Steps", "4. Action Steps")
     text = text.replace("## Follow-up Question", "5. Follow-up Question")
-
     return text
 
 def fix_risk_level(text):
-    # Cohere occasionally returns compound labels; reduce them to single-word values
     text = text.replace("Medium to High", "Medium")
     text = text.replace("Low to Medium", "Low")
     text = text.replace("High to Medium", "High")
@@ -29,8 +81,13 @@ def clean_spacing(text):
     return text.strip()
 
 
-
+# ---------------- 🤖 MAIN FUNCTION ---------------- #
 def get_ai_response(user_input, history=[]):
+
+    # 🔥 STEP 1: RULE CHECK (MOST IMPORTANT)
+    override = rule_based_override(user_input)
+    if override:
+        return override.strip()
 
     # ---------------- 🧠 BUILD HISTORY ---------------- #
     history_text = ""
@@ -50,7 +107,7 @@ Budget Breakdown:
 - Savings: ₹{savings}
 """
     else:
-        budget_section = ""   # 🔥 removed annoying message
+        budget_section = ""
 
     # ---------------- 📚 RAG CONTROL ---------------- #
     if len(user_input.split()) > 5:
@@ -72,36 +129,42 @@ Financial Knowledge:
 {context}
 ----------------------
 
+CRITICAL RULES (MUST FOLLOW):
+
+- Rent > 40% → always say it is risky
+- Saving < 20% → always say it is insufficient
+- Emergency fund → always recommend 3–6 months
+- SIP → good for beginners (long-term investing)
+
+- Equity investments → Medium risk
+- Debt instruments → Low risk
+- Savings goals → Low risk
+
+- If goal amount + timeline given → MUST calculate monthly savings
+- NEVER assume new numbers if already provided
+- ALWAYS use previous conversation data
+
+- For spending or budgeting questions:
+  - Always mention the 50/30/20 rule
+  - Always include at least 2 specific cost-cutting actions
+  - Do NOT use rent-specific rules for general expenses
+
+----------------------
+
 Instructions:
 
-- Use relevant financial rules if helpful
+- Be direct, practical, and concise
 - Do NOT invent numbers
-- If data is missing, use conditional advice
-- If input is short (yes/no), continue conversation naturally
-- Avoid textbook-style explanations
-- Use short, conversational sentences
-- Sound like a real human advisor, not a report
-- Be concise and practical
-- When the user provides a specific amount, suggest a clear allocation (₹ distribution)
-- Avoid vague phrases like "small investment"
-- Ensure Risk Level is consistent with the investment type
-- Avoid generic advice like "research more" or "consider options"
-- Give specific, actionable suggestions (numbers if possible)
-- If the user mentions a goal amount (e.g., buying something), break it into a simple savings plan
-- Show monthly saving options (e.g., ₹5000/month → X months)
-- Prefer simple saving strategies over investments for short-term goals
-- Avoid suggesting investments like mutual funds or FD for goals under 1 year
-- Include simple calculations when helpful
-- Always use information from previous conversation if available (income, savings, goals)
-- Do NOT ignore previously mentioned numbers
-- If goal amount and timeline are known, calculate exact monthly savings
-- NEVER assume a new number if it was already provided earlier
-- If goal amount + timeline are given → MUST calculate monthly saving required
-- For savings goals → Risk Level = Low (no market risk)
+- Avoid vague suggestions
 
-- When mentioning investments:
-  - Clearly specify type (equity, debt, index fund)
-  - Assign correct risk (Low/Medium/High based on type)
+- If user gives amount:
+  - Savings → suggest allocation
+  - Goal → monthly plan
+
+- For short-term goals:
+  - Prefer saving over investing
+
+- Include simple calculations
 
 ----------------------
 
@@ -115,7 +178,7 @@ Output Format:
 - Suggestion 2
 
 3. Risk Level:
-(MUST match the suggested investment type)
+(Low/Medium/High + reason)
 
 4. Action Steps:
 - Step 1
@@ -123,15 +186,6 @@ Output Format:
 - Step 3
 
 5. Follow-up Question:
-(Ask something useful)
-
-----------------------
-
-Rules:
-
-- Keep response under 100 words
-- Use simple language
-- Be direct and specific
 
 ----------------------
 
@@ -143,7 +197,7 @@ User Query:
     response = co.chat(
         model="command-r-plus-08-2024",
         message=prompt,
-        temperature=0.4   # 🔥 more stable
+        temperature=0.4
     )
 
     ai_text = response.text
@@ -151,7 +205,6 @@ User Query:
     ai_text = fix_risk_level(ai_text)
     ai_text = clean_spacing(ai_text)
 
-    # ---------------- 🎯 FINAL RESPONSE ---------------- #
     final_response = f"""
 {budget_section}
 {ai_text}

@@ -2,7 +2,7 @@ import chromadb
 from sentence_transformers import SentenceTransformer
 
 print("🔥 Loading RAG model...")
-
+# all-MiniLM-L6-v2 is a lightweight but effective model for semantic similarity tasks
 model = SentenceTransformer('all-MiniLM-L6-v2')
 print("✅ Model loaded successfully")
 
@@ -48,8 +48,8 @@ def query_rag(query):
     )
 
     docs = results["documents"][0]
-
+    # Boost rent-specific results to the front if the query is about rent
     if intent == "rent":
         docs = [d for d in docs if "rent" in d.lower()] + docs
-
+    # Return only the top 2 to keep the context passed to the LLM focused
     return "\n".join(docs[:2])

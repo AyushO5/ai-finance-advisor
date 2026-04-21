@@ -10,39 +10,44 @@ co = cohere.Client(os.getenv("COHERE_API_KEY"))
 def generate_ai_insights(insights, breakdown):
 
     prompt = f"""
-You are a financial advisor.
+You are a financial advisor analyzing expenses.
 
-Analyze the user's expenses and provide structured insights.
-
--------------------------
+----------------------
 Expense Breakdown:
 {chr(10).join(breakdown)}
 
 Detected Patterns:
 {chr(10).join(insights)}
--------------------------
+----------------------
 
-Follow STRICT format:
+Instructions:
+
+- Use numerical reasoning (percentages or proportions)
+- If any category is high (like rent), mention rule (e.g., 40%)
+- Avoid vague phrases like "significant" or "moderate"
+- Be specific and actionable
+- Do NOT give generic advice
+
+----------------------
+
+Output Format:
 
 1. Insights:
-- Insight 1
-- Insight 2
-- Insight 3
+- Include numbers or percentages
 
 2. Suggestions:
-- Suggestion 1
-- Suggestion 2
-- Suggestion 3
+- Practical and specific actions
 
 3. Warning:
-- Only include if overspending is detected
-- Otherwise write: None
+- If any category exceeds safe limits
+- Otherwise: None
+
+----------------------
 
 Rules:
-- Keep it under 100 words
-- Be practical and direct
-- Avoid generic statements
-- Do NOT add extra headings
+
+- Keep under 100 words
+- Be direct and specific
 
 """
 # chr(10) is used instead of \n inside the f-string to avoid syntax issues with backslashes

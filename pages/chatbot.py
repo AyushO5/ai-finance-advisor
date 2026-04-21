@@ -78,18 +78,18 @@ col1, col2, col3 = st.columns([5, 2, 1])
 
 with col1:
     user_input = st.text_input(
-        "",
-        placeholder="Ask anything...",
-        label_visibility="collapsed"
-    )
+    "User Input",   
+    placeholder="Ask anything...",
+    label_visibility="collapsed"
+)
 
 with col2:
-    uploaded_file = st.file_uploader(
-        "",
-        type=["csv"],
-        label_visibility="collapsed"
-    )
-
+   uploaded_file = st.file_uploader(
+    "Upload CSV",  
+    type=["csv"],
+    label_visibility="collapsed"
+)
+   
 with col3:
     submit = st.button("Send")
 
@@ -129,7 +129,12 @@ if submit:
 
         st.subheader("📊 Expense Breakdown")
 
+        if "expenses" not in data:
+            st.error("Invalid response from server")
+            st.write(data)   # shows actual error
+            st.stop()
         expenses = data["expenses"]
+
         df = pd.DataFrame(list(expenses.items()), columns=["Category", "Amount"])
 
         fig1, ax1 = plt.subplots()

@@ -30,14 +30,19 @@ def clean_spacing(text):
 
 
 
-def get_ai_response(user_input):
+def get_ai_response(user_input, history=[]):
 
-    
+    # ---------------- 🧠 BUILD HISTORY ---------------- #
+    history_text = ""
+    for msg in history[-5:]:
+        role = "User" if msg["role"] == "user" else "Assistant"
+        history_text += f"{role}: {msg['content']}\n"
+
+    # ---------------- 💰 BUDGET LOGIC ---------------- #
     income = extract_income(user_input)
 
     if income:
         needs, wants, savings = calculate_budget(income)
-
         budget_section = f"""
 Budget Breakdown:
 - Needs: ₹{needs}
@@ -45,53 +50,62 @@ Budget Breakdown:
 - Savings: ₹{savings}
 """
     else:
-        budget_section = "Budget Breakdown: Not enough data provided."
+        budget_section = ""   # 🔥 removed annoying message
 
-    # Pull relevant financial knowledge from ChromaDB to ground the response
-    context = query_rag(user_input)
+    # ---------------- 📚 RAG CONTROL ---------------- #
+    if len(user_input.split()) > 5:
+        context = query_rag(user_input)
+    else:
+        context = ""
 
+    print("RAG CONTEXT:", context)
+
+    # ---------------- 🧠 PROMPT ---------------- #
     prompt = f"""
-You are an intelligent financial advisor helping users manage their money.
+Previous Conversation:
+{history_text}
 
-You MUST follow this workflow internally:
-1. Understand the user's financial situation
-2. Use the provided financial knowledge if relevant
-3. Apply practical reasoning
-4. Give clear, actionable advice
+You are a practical financial advisor.
 
 ----------------------
-📚 Financial Knowledge:
+Financial Knowledge:
 {context}
 ----------------------
 
-🎯 Instructions:
-- Use the financial knowledge wherever relevant
-- Do NOT include phrases like "Not enough data provided" or system messages.
-- Do NOT assume user financial details unless explicitly given.
-- Use conditional language like "If your rent exceeds 40%..."
-- When a financial rule is known, state it directly and confidently. 
-- Avoid unrealistic or uncommon solutions like government programs unless highly relevant.
-- Prefer practical, common actions.
-- If user income/expenses are unclear, make reasonable assumptions.
-- If financial knowledge contains a rule (like percentage limits), you MUST include it clearly in the answer.
-- Avoid generic phrases like "common challenge" or "important to balance".
-- Be direct and specific.
-- Always provide specific actions like "reduce", "track", "cut expenses" for budgeting questions.
-- Personalize the advice based on the user's situation
-- Be practical, not theoretical
-- Avoid generic statements. 
-- Avoid suggesting high-risk or speculative investments unless explicitly asked.
+Instructions:
 
-📦 Output Format (STRICT):
+- Use relevant financial rules if helpful
+- Do NOT invent numbers
+- If data is missing, use conditional advice
+- If input is short (yes/no), continue conversation naturally
+- Avoid textbook-style explanations
+- Use short, conversational sentences
+- Sound like a real human advisor, not a report
+- Be concise and practical
+- When the user provides a specific amount, suggest a clear allocation (₹ distribution)
+- Avoid vague phrases like "small investment"
+- Ensure Risk Level is consistent with the investment type
 
-1. Summary (2 short lines, very clear)
+- When mentioning investments:
+  - Clearly specify type (equity, debt, index fund)
+  - Assign correct risk (Low/Medium/High based on type)
+  
+- Avoid generic advice like "research more" or "consider options"
+- Give specific, actionable suggestions (numbers if possible)
+
+----------------------
+
+Output Format:
+
+1. Summary:
+(2 short lines)
 
 2. Investment Suggestions:
-- Bullet point 1
-- Bullet point 2
+- Suggestion 1
+- Suggestion 2
 
 3. Risk Level:
-Low / Medium / High (with 1 line reason)
+(MUST match the suggested investment type)
 
 4. Action Steps:
 - Step 1
@@ -99,23 +113,27 @@ Low / Medium / High (with 1 line reason)
 - Step 3
 
 5. Follow-up Question:
-(Ask something meaningful to continue conversation)
+(Ask something useful)
 
-⚠️ Rules:
-- Keep response under 120 words
-- Use simple, conversational language
-- Do NOT repeat the question
-- Do NOT add unnecessary explanations
+----------------------
 
-User Query:{user_input}
+Rules:
+
+- Keep response under 100 words
+- Use simple language
+- Be direct and specific
+
+----------------------
+
+User Query:
+{user_input}
 """
-    
-    print("RAG CONTEXT:", context)
 
+    # ---------------- 🤖 MODEL CALL ---------------- #
     response = co.chat(
-        model="command-r-plus-08-2024", 
+        model="command-r-plus-08-2024",
         message=prompt,
-        temperature=0.5 # Slightly higher than expense_ai_service to allow more varied phrasing
+        temperature=0.4   # 🔥 more stable
     )
 
     ai_text = response.text
@@ -123,10 +141,10 @@ User Query:{user_input}
     ai_text = fix_risk_level(ai_text)
     ai_text = clean_spacing(ai_text)
 
+    # ---------------- 🎯 FINAL RESPONSE ---------------- #
     final_response = f"""
 {budget_section}
-
 {ai_text}
 """
 
-    return final_response
+    return final_response.strip()

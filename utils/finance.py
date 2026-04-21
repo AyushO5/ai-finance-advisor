@@ -1,10 +1,21 @@
 import re
 
-def extract_income(text):
-    # Grabs the first number found in the text — assumes income is mentioned early in the message
-    match = re.search(r'\d+', text)
-    return int(match.group()) if match else None
+import re
 
+def extract_income(text):
+    text = text.lower()
+
+    income_keywords = ["salary", "income", "earn", "per month", "monthly"]
+
+    if not any(word in text for word in income_keywords):
+        return None
+
+    match = re.search(r'\d+', text)
+
+    if match:
+        return int(match.group())
+
+    return None
 
 def calculate_budget(income):
     # Splits income using the 50/30/20 rule: 50% needs, 30% wants, 20% savings

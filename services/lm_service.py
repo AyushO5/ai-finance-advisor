@@ -9,6 +9,7 @@ load_dotenv()
 co = cohere.Client(os.getenv("COHERE_API_KEY"))
 
 def format_headings(text):
+    # Cohere sometimes returns markdown-style headings (##); normalize them to numbered format
     text = text.replace("## Summary", "1. Summary")
     text = text.replace("## Investment Suggestions", "2. Investment Suggestions")
     text = text.replace("## Risk Level", "3. Risk Level")
@@ -18,6 +19,7 @@ def format_headings(text):
     return text
 
 def fix_risk_level(text):
+    # Cohere occasionally returns compound labels; reduce them to single-word values
     text = text.replace("Medium to High", "Medium")
     text = text.replace("Low to Medium", "Low")
     text = text.replace("High to Medium", "High")
@@ -45,7 +47,7 @@ Budget Breakdown:
     else:
         budget_section = "Budget Breakdown: Not enough data provided."
 
-    
+    # Pull relevant financial knowledge from ChromaDB to ground the response
     context = query_rag(user_input)
 
     prompt = f"""
@@ -113,7 +115,7 @@ User Query:{user_input}
     response = co.chat(
         model="command-r-plus-08-2024", 
         message=prompt,
-        temperature=0.5
+        temperature=0.5 # Slightly higher than expense_ai_service to allow more varied phrasing
     )
 
     ai_text = response.text

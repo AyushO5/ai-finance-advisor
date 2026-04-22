@@ -57,6 +57,6 @@ finance-bot/
 ## ⚙️ Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ai-finance-advisor.git
+git clone https://github.com/AyushO5/ai-finance-advisor.git
 cd ai-finance-advisor
 pip install -r requirements.txt

@@ -62,7 +62,6 @@ Can you increase your savings to 15–20%?
     return None
 
 
-# ---------------- 🧹 HELPERS ---------------- #
 def format_headings(text):
     text = text.replace("## Summary", "1. Summary")
     text = text.replace("## Investment Suggestions", "2. Investment Suggestions")
@@ -81,21 +80,17 @@ def clean_spacing(text):
     return text.strip()
 
 
-# ---------------- 🤖 MAIN FUNCTION ---------------- #
 def get_ai_response(user_input, history=[]):
 
-    # 🔥 STEP 1: RULE CHECK (MOST IMPORTANT)
     override = rule_based_override(user_input)
     if override:
         return override.strip()
 
-    # ---------------- 🧠 BUILD HISTORY ---------------- #
     history_text = ""
     for msg in history[-5:]:
         role = "User" if msg["role"] == "user" else "Assistant"
         history_text += f"{role}: {msg['content']}\n"
 
-    # ---------------- 💰 BUDGET LOGIC ---------------- #
     income = extract_income(user_input)
 
     if income:
@@ -109,7 +104,6 @@ Budget Breakdown:
     else:
         budget_section = ""
 
-    # ---------------- 📚 RAG CONTROL ---------------- #
     if len(user_input.split()) > 5:
         context = query_rag(user_input)
     else:
@@ -117,7 +111,6 @@ Budget Breakdown:
 
     print("RAG CONTEXT:", context)
 
-    # ---------------- 🧠 PROMPT ---------------- #
     prompt = f"""
 Previous Conversation:
 {history_text}
@@ -215,7 +208,6 @@ User Query:
 {user_input}
 """
 
-    # ---------------- 🤖 MODEL CALL ---------------- #
     response = co.chat(
         model="command-r-plus-08-2024",
         message=prompt,

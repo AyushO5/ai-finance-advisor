@@ -1,4 +1,4 @@
-# 💰 AI Financial Advisor
+#  AI Financial Advisor
 
 An AI-powered financial assistant that analyzes expenses, provides budgeting advice, and generates personalized financial insights using LLMs and RAG (Retrieval-Augmented Generation).
 

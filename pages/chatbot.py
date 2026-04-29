@@ -1,123 +1,126 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import streamlit as st
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
+from utils.memory import load_memory, save_memory, update_profile, get_current_chat, create_new_chat
 
-st.set_page_config(page_title="Finance Advisor", page_icon="💰")
+st.set_page_config(page_title="Finance Advisor", page_icon="💰", layout="wide")
 
-# Custom CSS to pin the input bar to the bottom of the screen
+# ---------------- 🧠 LOAD MEMORY ---------------- #
+memory = load_memory()
+current_chat = get_current_chat(memory)
+
+if "messages" not in st.session_state:
+    st.session_state.messages = current_chat["messages"]
+
+# ---------------- 🎨 CLEAN UI STYLE ---------------- #
 st.markdown("""
 <style>
-            
-
-
-.chat-input-container {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background-color: #0e1117;
-    padding: 10px 20px;
-    border-top: 1px solid #333;
-    z-index: 1000;
+.block-container {
+    max-width: 900px;
+    padding-top: 2rem;
 }
-
-.main-content {
-    padding-bottom: 120px;
+section[data-testid="stSidebar"] {
+    width: 260px !important;
 }
-
-[data-testid="stFileUploader"] small {
-    display: none;
-}
-
-
-[data-testid="stFileUploader"] {
-    margin-top: -10px;
-}
-
-.row-widget.stTextInput, 
-.row-widget.stFileUploader, 
-.row-widget.stButton {
-    display: flex;
-    align-items: center;
-}
-
-div[data-testid="column"] {
-    padding: 0 !important;
-}
-
-[data-testid="stFileUploader"] small {
-    display: none;
-}
-
-
 </style>
 """, unsafe_allow_html=True)
 
+# ---------------- 📂 SIDEBAR ---------------- #
+st.sidebar.title("💬 Chats")
 
-st.markdown('<div class="main-content">', unsafe_allow_html=True)
+if st.sidebar.button("➕ New Chat"):
+    memory = create_new_chat(memory)
+    save_memory(memory)
 
+    new_chat = get_current_chat(memory)
+    st.session_state.messages = new_chat["messages"]
+    st.rerun()
+
+st.sidebar.markdown("---")
+
+for chat in memory["chats"]:
+    if st.sidebar.button(f"Chat {chat['id']}"):
+        memory["current_chat_id"] = chat["id"]
+        save_memory(memory)
+
+        new_chat = get_current_chat(memory)
+        st.session_state.messages = new_chat["messages"]
+        st.rerun()
+
+# ---------------- 🧾 HEADER ---------------- #
 st.title("💰 AI Financial Advisor")
-st.subheader("💬 Chat with AI")
+st.caption("Smart assistant for budgeting, savings, and investments")
 
-# Persist chat history across reruns using session state
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# ---------------- 💬 CHAT AREA ---------------- #
+chat_container = st.container()
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+with chat_container:
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-st.markdown('</div>', unsafe_allow_html=True)
+# ---------------- ⌨️ INPUT ---------------- #
 
-
-
-st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
-
-col1, col2, col3 = st.columns([5, 2, 1])
-
-with col1:
-    user_input = st.text_input(
-    "User Input",   
-    placeholder="Ask anything...",
-    label_visibility="collapsed"
+# 🔥 add vertical spacing
+st.markdown(
+    "<div style='height: 40px;'></div>",
+    unsafe_allow_html=True
 )
 
-with col2:
-   uploaded_file = st.file_uploader(
-    "Upload CSV",  
-    type=["csv"],
-    label_visibility="collapsed"
-)
-   
-with col3:
-    submit = st.button("Send")
+input_container = st.container()
 
-st.markdown('</div>', unsafe_allow_html=True)
+with input_container:
+    left, center, right = st.columns([1, 6, 1])
 
+    with center:
+        uploaded_file = st.file_uploader(
+            "Upload CSV for expense analysis",
+            type=["csv"]
+        )
 
+        # 🔥 more spacing between uploader and chatbox
+        st.markdown("<br>", unsafe_allow_html=True)
 
-if submit:
+        user_input = st.chat_input(
+            "Ask about saving, investing, budgeting..."
+        )
+# ---------------- 🚀 LOGIC ---------------- #
+if user_input:
+    st.session_state.messages.append({"role": "user", "content": user_input})
 
-    if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
+    memory["profile"] = update_profile(user_input, memory["profile"])
 
-        try:
-            res = requests.post(
-                "http://127.0.0.1:5000/chat",
-                json={"message": user_input}
-            )
-            data = res.json()
-            bot_reply = data.get("reply", "Error")
+    try:
+        res = requests.post(
+            "http://127.0.0.1:5000/chat",
+            json={
+                "message": user_input,
+                "history": st.session_state.messages,
+                "profile": memory["profile"]
+            }
+        )
+        data = res.json()
+        bot_reply = data.get("reply", "Error")
 
-        except:
-            bot_reply = "Backend not reachable"
+    except Exception as e:
+        bot_reply = f"Backend error: {str(e)}"
 
-        st.session_state.messages.append({"role": "assistant", "content": bot_reply})
-        st.rerun()  # Re-render the page so the new messages show up immediately
+    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
 
+    current_chat = get_current_chat(memory)
+    current_chat["messages"] = st.session_state.messages
+    save_memory(memory)
 
-    if uploaded_file:
+    st.rerun()
+
+# ---------------- 📊 CSV ---------------- #
+if uploaded_file:
+    try:
         files = {"file": uploaded_file}
 
         res = requests.post(
@@ -131,8 +134,9 @@ if submit:
 
         if "expenses" not in data:
             st.error("Invalid response from server")
-            st.write(data)   # shows actual error
+            st.write(data)
             st.stop()
+
         expenses = data["expenses"]
 
         df = pd.DataFrame(list(expenses.items()), columns=["Category", "Amount"])
@@ -147,3 +151,6 @@ if submit:
 
         st.subheader("🤖 AI Insights")
         st.write(data["ai_insights"])
+
+    except Exception as e:
+        st.error(f"Upload error: {str(e)}")

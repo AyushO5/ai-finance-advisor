@@ -5,69 +5,69 @@ from utils.finance import extract_income, calculate_budget
 from services.rag_service import query_rag
 
 load_dotenv()
-
 co = cohere.Client(os.getenv("COHERE_API_KEY"))
 
+
+# ---------------- RULE-BASED OVERRIDE ---------------- #
 def rule_based_override(user_input):
     text = user_input.lower()
 
-    # RENT RULE
-    if "rent" in text:
-        if "45" in text or "50" in text:
-            return """
+    if "rent" in text and any(x in text for x in ["45", "50"]):
+        return """
 1. Summary:
-Spending above 40% of income on rent is risky.
-It can reduce your ability to save.
+Rent above 40% is risky.
+It reduces savings potential.
 
-2. Investment Suggestions:
-- Reduce rent by moving or sharing
-- Keep rent below 40% of income
+2. Key Points:
+- Recommended: ≤ 40% of income
+- High rent → low savings
 
 3. Risk Level:
-High. High rent limits savings.
+High. Limits financial flexibility.
 
 4. Action Steps:
-- Calculate rent-to-income ratio
-- Look for cheaper housing options
-- Cut unnecessary expenses
+- Calculate rent %
+- Target below 40%
+- Reduce or relocate
 
 5. Follow-up Question:
-What percentage of your income goes to rent?
+What % of income goes to rent?
 """
 
-    # SAVING RULE
     if "saving 10%" in text:
         return """
 1. Summary:
-Saving 10% is below the recommended level.
-You should aim for at least 20%.
+Saving 10% is low.
+Aim for at least 20%.
 
-2. Investment Suggestions:
-- Increase savings gradually to 20%
-- Automate monthly savings
+2. Key Points:
+- Recommended: 20%+
+- Low savings → weak future security
 
 3. Risk Level:
-Medium. Low savings can affect future goals.
+Medium. Impacts long-term goals.
 
 4. Action Steps:
+- Increase to 15%
 - Track expenses
-- Cut unnecessary spending
-- Increase savings step by step
+- Cut 2 unnecessary costs
 
 5. Follow-up Question:
-Can you increase your savings to 15–20%?
+Can you increase savings gradually?
 """
 
     return None
 
 
+# ---------------- HELPERS ---------------- #
 def format_headings(text):
     text = text.replace("## Summary", "1. Summary")
-    text = text.replace("## Investment Suggestions", "2. Investment Suggestions")
+    text = text.replace("## Investment Suggestions", "2. Key Points")
     text = text.replace("## Risk Level", "3. Risk Level")
     text = text.replace("## Action Steps", "4. Action Steps")
     text = text.replace("## Follow-up Question", "5. Follow-up Question")
     return text
+
 
 def fix_risk_level(text):
     text = text.replace("Medium to High", "Medium")
@@ -75,23 +75,34 @@ def fix_risk_level(text):
     text = text.replace("High to Medium", "High")
     return text
 
+
 def clean_spacing(text):
     return text.strip()
 
 
-def get_ai_response(user_input, history=[]):
+# ---------------- MAIN FUNCTION ---------------- #
+def get_ai_response(user_input, history=[], profile={}):
 
+    # 🔥 1. RULE OVERRIDE
     override = rule_based_override(user_input)
     if override:
         return override.strip()
 
+    # 🔥 2. HISTORY BUILD
     history_text = ""
     for msg in history[-5:]:
         role = "User" if msg["role"] == "user" else "Assistant"
         history_text += f"{role}: {msg['content']}\n"
 
-    income = extract_income(user_input)
+    # 🔥 3. PROFILE CONTEXT
+    profile_text = f"""
+User Profile:
+- Income: {profile.get("income", "Unknown")}
+- Goal: {profile.get("goal", "Not specified")}
+"""
 
+    # 🔥 4. BUDGET (ONLY IF NEW INCOME)
+    income = extract_income(user_input)
     if income:
         needs, wants, savings = calculate_budget(income)
         budget_section = f"""
@@ -103,14 +114,24 @@ Budget Breakdown:
     else:
         budget_section = ""
 
+    # 🔥 5. SMART RAG (FIXED 🔥🔥)
     if len(user_input.split()) > 5:
         context = query_rag(user_input)
     else:
-        context = ""
+        # use last meaningful message
+        last_msg = ""
+        for msg in reversed(history):
+            if msg["role"] == "user" and len(msg["content"].split()) > 3:
+                last_msg = msg["content"]
+                break
+        context = query_rag(last_msg) if last_msg else ""
 
     print("RAG CONTEXT:", context)
 
+    # 🔥 6. PROMPT
     prompt = f"""
+{profile_text}
+
 Previous Conversation:
 {history_text}
 
@@ -121,83 +142,58 @@ Financial Knowledge:
 {context}
 ----------------------
 
-CRITICAL RULES (MUST FOLLOW):
+CRITICAL RULES:
 
-- Rent > 40% → always say it is risky
-- Saving < 20% → always say it is insufficient
-- Emergency fund → always recommend 3–6 months
-- SIP → good for beginners (long-term investing)
+- Rent > 40% → risky
+- Saving < 20% → insufficient
+- Emergency fund → 3–6 months
+- SIP → good for beginners
 
-- Equity investments → Medium risk
-- Debt instruments → Low risk
+- Equity → Medium risk
+- Debt → Low risk
 - Savings goals → Low risk
 
-- If goal amount + timeline given → MUST calculate monthly savings
-- NEVER assume new numbers if already provided
-- ALWAYS use previous conversation data
-
-- For budgeting:
-  - Use 50/30/20 rule
-  - Give at least 2 cost-cutting actions
-  - Do NOT mix rent rules with general expenses
+- ALWAYS use previous context
+- NEVER ignore user-provided numbers
 
 ----------------------
 
 Instructions:
 
-- Be direct, practical, and concise
-- Do NOT invent numbers
-- Avoid vague suggestions
+- Be short, direct, practical
+- NO vague advice
 
-# 🔥 NEW (VERY IMPORTANT)
-- If user provides a specific amount:
-  - MUST give exact ₹ allocation (numbers required)
-  - Allocation MUST sum to total amount
-  - Example: ₹20,000 + ₹10,000 + ₹10,000 = ₹40,000
-
-- NEVER say "a portion", "some amount", or "consider investing"
-- ALWAYS include numbers when money is mentioned
-
-- If savings:
-  - Suggest allocation (e.g., 60/30/10 split)
+- If amount given:
+  → MUST give exact ₹ allocation
+  → MUST sum correctly
 
 - If goal:
-  - Give monthly saving plan (₹/month + timeline)
+  → give monthly saving plan
 
-- For short-term goals:
-  - Prefer saving over investing
+- If short reply:
+  → continue previous topic
 
-- Include simple calculations when relevant
+- For budgeting:
+  → use 50/30/20 rule
+  → give 2 cost-cutting actions
 
-- For factual queries (like tax, rules, percentages):
-  - MUST extract and use exact numbers from the provided context
-  - MUST include tax slabs, percentages, or limits if present
-  - Do NOT give generic explanations if data is available
-  - If relevant financial knowledge is provided:
-  - You MUST use it directly in the answer
-  - Do NOT ignore it
-
-- If user input is very short (like "yes", "no", "I do"):
-  - MUST rely on previous conversation
-  - MUST continue the same topic
-  - MUST NOT switch topic randomly
+- For factual queries:
+  → use exact numbers from context
 
 ----------------------
 
 Output Format:
 
 1. Summary:
-(2 short lines)
+(2 lines)
 
 2. Key Points:
-- Use for factual queries like tax
-- Include exact numbers if available
+(Use numbers if possible)
 
 3. Risk Level:
-(Low/Medium/High + correct reason)
+(reason)
 
 4. Action Steps:
-- Include at least one numeric step (₹ or %)
 - Step 1
 - Step 2
 - Step 3
@@ -206,23 +202,15 @@ Output Format:
 
 ----------------------
 
-Rules:
-
-- Keep response under 100 words
-- Use simple language
-- Be specific and actionable
-- NO generic explanations
-
-----------------------
-
 User Query:
 {user_input}
 """
 
+    # 🔥 7. MODEL CALL
     response = co.chat(
         model="command-r-plus-08-2024",
         message=prompt,
-        temperature=0.4
+        temperature=0.3  # 🔥 more stable
     )
 
     ai_text = response.text
@@ -230,9 +218,4 @@ User Query:
     ai_text = fix_risk_level(ai_text)
     ai_text = clean_spacing(ai_text)
 
-    final_response = f"""
-{budget_section}
-{ai_text}
-"""
-
-    return final_response.strip()
+    return f"{budget_section}\n{ai_text}".strip()

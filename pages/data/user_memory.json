@@ -1,0 +1,35 @@
+{
+  "chats": [
+    {
+      "id": 1,
+      "messages": [
+        {
+          "role": "user",
+          "content": "yes i do "
+        },
+        {
+          "role": "assistant",
+          "content": "1. Summary:\nYou are discussing your financial situation and have confirmed that you have an emergency fund. Now, we will assess your savings and investments.\n\n2. Key Points:\n- Emergency fund: Confirmed.\n- Next step: Review savings and investments.\n\n3. Risk Level:\nLow, depending on your investment choices.\n\n4. Action Steps:\n- Step 1: List your current savings and investments, including amounts and types (e.g., equity, debt, SIPs).\n- Step 2: Evaluate your risk tolerance and investment goals.\n- Step 3: Consider diversifying your portfolio to balance risk and returns.\n\n5. Follow-up Question:\nWhat specific investments or savings plans do you currently have in place? (e.g., mutual funds, stocks, fixed deposits)"
+        },
+        {
+          "role": "user",
+          "content": "hey"
+        },
+        {
+          "role": "user",
+          "content": "hey"
+        },
+        {
+          "role": "assistant",
+          "content": "1. Summary:\nWe are discussing your financial plan and have confirmed the presence of an emergency fund. Now, we'll review your savings and investments to tailor a strategy.\n\n2. Key Points:\n- Emergency fund: Check.\n- Next: Understand your current investments.\n\n3. Risk Level:\nLow, depending on your portfolio.\n\n4. Action Steps:\n- List all your savings and investments, specifying amounts and types (e.g., stocks, bonds, mutual funds).\n- Assess your risk tolerance and financial objectives.\n- Consider rebalancing your portfolio for optimal risk management.\n\n5. Follow-up Question:\nCould you provide details of your current investments, including the amounts allocated to each type of asset?"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "messages": []
+    }
+  ],
+  "current_chat_id": 1,
+  "profile": {}
+}

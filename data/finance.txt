@@ -26,3 +26,30 @@ Risk Awareness:
 
 - Avoid investing without financial stability.
 - High-risk investments should only be considered after building savings and emergency funds.
+
+India Tax Regime:
+
+Old Tax Regime (India):
+
+Tax Slabs:
+- Up to ₹2.5 lakh → 0%
+- ₹2.5L to ₹5L → 5%
+- ₹5L to ₹10L → 20%
+- Above ₹10L → 30%
+
+Deductions Allowed:
+- Section 80C → up to ₹1.5 lakh
+- Standard deduction → ₹50,000
+- HRA and other exemptions
+
+Key Insight:
+Old regime is better for people who claim deductions.
+
+New Tax Regime:
+- Lower tax rates but NO major deductions
+- Simpler structure
+
+General Rule:
+- Old regime is better if you claim many deductions
+- New regime is better if you don't claim deductions
+

@@ -6,24 +6,21 @@ print("🔥 Loading RAG model...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 print("✅ Model loaded successfully")
 
-client = chromadb.Client()
+client = chromadb.Client(
+    settings=chromadb.config.Settings(
+        persist_directory="data/chroma"
+    )
+)
 collection = client.get_or_create_collection("finance")
 
-
-def detect_intent(query):
-    query = query.lower()
-
-    if "rent" in query:
-        return "rent"
-    elif "save" in query or "saving" in query:
-        return "saving"
-    elif "investment" in query:
-        return "investment"
-    else:
-        return "general"
-
-
 def load_data():
+    # 🔥 check if data already exists
+    if collection.count() > 0:
+        print("⚡ Data already loaded, skipping...")
+        return
+
+    print("📄 Loading finance data...")
+
     with open("data/finance.txt", "r") as f:
         docs = f.readlines()
 
@@ -35,6 +32,23 @@ def load_data():
             embeddings=[embedding],
             ids=[str(i)]
         )
+    print("✅ Data loaded and persisted")
+
+
+
+def detect_intent(query):
+    query = query.lower()
+
+    if "rent" in query:
+        return "rent"
+    elif "tax" in query:
+        return "tax"
+    elif any(word in query for word in ["save", "saving"]):
+        return "saving"
+    elif any(word in query for word in ["invest", "investment", "mutual", "sip"]):
+        return "investment"
+    else:
+        return "general"
 
 
 def query_rag(query):
@@ -47,9 +61,16 @@ def query_rag(query):
         n_results=4
     )
 
-    docs = results["documents"][0]
-    # Boost rent-specific results to the front if the query is about rent
+    docs = results.get("documents", [[]])[0]
+
+    if not docs:
+        return ""
+
     if intent == "rent":
         docs = [d for d in docs if "rent" in d.lower()] + docs
-    # Return only the top 2 to keep the context passed to the LLM focused
+    elif intent == "tax":
+        docs = [d for d in docs if "tax" in d.lower()] + docs
+
     return "\n".join(docs[:2])
+
+load_data()

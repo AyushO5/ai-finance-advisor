@@ -8,7 +8,6 @@ load_dotenv()
 
 co = cohere.Client(os.getenv("COHERE_API_KEY"))
 
-# ---------------- 🚨 RULE-BASED OVERRIDE ---------------- #
 def rule_based_override(user_input):
     text = user_input.lower()
 
@@ -170,6 +169,19 @@ Instructions:
 
 - Include simple calculations when relevant
 
+- For factual queries (like tax, rules, percentages):
+  - MUST extract and use exact numbers from the provided context
+  - MUST include tax slabs, percentages, or limits if present
+  - Do NOT give generic explanations if data is available
+  - If relevant financial knowledge is provided:
+  - You MUST use it directly in the answer
+  - Do NOT ignore it
+
+- If user input is very short (like "yes", "no", "I do"):
+  - MUST rely on previous conversation
+  - MUST continue the same topic
+  - MUST NOT switch topic randomly
+
 ----------------------
 
 Output Format:
@@ -177,10 +189,9 @@ Output Format:
 1. Summary:
 (2 short lines)
 
-2. Investment Suggestions:
-- Must include ₹ amounts
-- Suggestion 1
-- Suggestion 2
+2. Key Points:
+- Use for factual queries like tax
+- Include exact numbers if available
 
 3. Risk Level:
 (Low/Medium/High + correct reason)

@@ -7,6 +7,125 @@ from services.rag_service import query_rag
 load_dotenv()
 co = cohere.Client(os.getenv("COHERE_API_KEY"))
 
+import re
+
+
+# 🔥 Extract numbers from user input
+def extract_financial_data(text):
+    numbers = list(map(int, re.findall(r'\d+', text)))
+
+    # expecting: income, rent, food, shopping, travel, others
+    if len(numbers) < 5:
+        return None
+
+    return {
+        "income": numbers[0],
+        "rent": numbers[1],
+        "food": numbers[2],
+        "shopping": numbers[3],
+        "travel": numbers[4],
+        "others": numbers[5] if len(numbers) > 5 else 0
+    }
+
+
+# 🔥 Analyze percentages
+def analyze_finances(data):
+    income = data["income"]
+
+    def percent(x):
+        return round((x / income) * 100, 1)
+
+    rent_p = percent(data["rent"])
+    food_p = percent(data["food"])
+    shopping_p = percent(data["shopping"])
+    travel_p = percent(data["travel"])
+    others_p = percent(data["others"])
+
+    total_spent = (
+        data["rent"]
+        + data["food"]
+        + data["shopping"]
+        + data["travel"]
+        + data["others"]
+    )
+
+    savings_p = round(((income - total_spent) / income) * 100, 1)
+
+    return {
+        "rent": rent_p,
+        "food": food_p,
+        "shopping": shopping_p,
+        "travel": travel_p,
+        "others": others_p,
+        "savings": savings_p
+    }
+
+
+def data_override(insights):
+    if not insights:
+        return None
+
+    text = insights.lower()
+
+    # 🔥 extract all percentages
+    percentages = re.findall(r"(\d+\.?\d*)%", text)
+    percentages = [float(p) for p in percentages]
+
+    if not percentages:
+        return None
+
+    highest = max(percentages)
+
+    # 🔥 detect rent specifically
+    if "rent" in text and highest > 40:
+        return f"""
+1. Summary:
+Your rent is {highest}%, which is too high.
+It is the main reason you're not saving enough.
+
+2. Key Points:
+- Recommended rent ≤ 40%
+- Current rent: {highest}%
+- High rent reduces savings capacity
+
+3. Risk Level:
+High. Major financial strain.
+
+4. Action Steps:
+- Reduce rent below 40%
+- Consider sharing or relocating
+- Cut fixed expenses
+
+5. Follow-up Question:
+Can you reduce rent in next 3 months?
+"""
+
+    # 🔥 fallback for any high expense
+    if highest > 40:
+        return f"""
+1. Summary:
+Your highest expense is {highest}%, which is too high.
+It is limiting your savings.
+
+2. Key Points:
+- Recommended max: 40%
+- Current: {highest}%
+- High expense reduces savings
+
+3. Risk Level:
+High. Impacts financial stability.
+
+4. Action Steps:
+- Reduce this expense below 40%
+- Track spending weekly
+- Reallocate to savings
+
+5. Follow-up Question:
+Which expense can you reduce first?
+"""
+
+    return None
+
 
 # ---------------- RULE-BASED OVERRIDE ---------------- #
 def rule_based_override(user_input):
@@ -81,12 +200,47 @@ def clean_spacing(text):
 
 
 # ---------------- MAIN FUNCTION ---------------- #
-def get_ai_response(user_input, history=[], profile={}):
+def get_ai_response(user_input, history, profile, insights):
 
-    # 🔥 1. RULE OVERRIDE
-    override = rule_based_override(user_input)
-    if override:
-        return override.strip()
+    # 🔥 SMART FILTER
+    data = extract_financial_data(user_input)
+    keywords = ["earn", "income", "salary", "rent", "food", "spend", "expense"]
+
+    # 🔥 ONLY run if valid financial data exists
+    if data is not None and any(word in user_input.lower() for word in keywords):
+        analysis = analyze_finances(data)
+
+        prompt = f"""
+You are a financial advisor.
+
+Analyze this financial data:
+
+Income: ₹{data["income"]}
+Rent: ₹{data["rent"]}
+Food: ₹{data["food"]}
+Shopping: ₹{data["shopping"]}
+Travel: ₹{data["travel"]}
+Other: ₹{data["others"]}
+
+Percentages:
+- Rent: {analysis["rent"]}%
+- Savings: {analysis["savings"]}%
+- Shopping: {analysis["shopping"]}%
+
+Give:
+1. Summary
+2. Key Points
+3. Risk Level
+4. Action Steps
+5. Follow-up Question
+"""
+        # FIX: response and return were outside the if block (wrong indentation)
+        response = co.chat(
+            model="command-r-plus-08-2024",
+            message=prompt,
+            temperature=0.3
+        )
+        return response.text.strip()
 
     # 🔥 2. HISTORY BUILD
     history_text = ""
@@ -114,7 +268,7 @@ Budget Breakdown:
     else:
         budget_section = ""
 
-    # 🔥 5. SMART RAG (FIXED 🔥🔥)
+    # 🔥 5. SMART RAG
     if len(user_input.split()) > 5:
         context = query_rag(user_input)
     else:
@@ -140,9 +294,19 @@ You are a practical financial advisor.
 ----------------------
 Financial Knowledge:
 {context}
+
+User Financial Data:
+{insights}
 ----------------------
 
 CRITICAL RULES:
+- If "User Financial Data" is provided:
+    - MUST identify highest expense category
+    - MUST give advice based on that category
+    - MUST include percentage or number from data
+    - MUST NOT give generic advice
+
+- If data exists and you ignore it → response is WRONG
 
 - Rent > 40% → risky
 - Saving < 20% → insufficient
@@ -180,6 +344,11 @@ Instructions:
 - For factual queries:
   → use exact numbers from context
 
+- If expense data is available, prioritize the highest expense category
+- Give specific advice based on that category
+
+- Always give at least 1 personalized insight based on user data
+
 ----------------------
 
 Output Format:
@@ -210,7 +379,7 @@ User Query:
     response = co.chat(
         model="command-r-plus-08-2024",
         message=prompt,
-        temperature=0.3  # 🔥 more stable
+        temperature=0.3
     )
 
     ai_text = response.text

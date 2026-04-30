@@ -8,7 +8,9 @@ def chat():
     data = request.get_json()
 
     user_input = data.get("message")
-    history = data.get("history", [])   # 🧠 NEW
+    history = data.get("history", [])
+    profile = data.get("profile", {})      # 🔥 NEW
+    insights = data.get("insights", "")    # 🔥 NEW
 
     if not user_input:
         return jsonify({"error": "Message required"}), 400
@@ -17,6 +19,7 @@ def chat():
     if len(user_input.split()) <= 3:
         user_input = f"User said: '{user_input}'. Continue the previous conversation appropriately."
 
-    reply = get_ai_response(user_input, history)   # 🧠 PASS HISTORY
+    # 🔥 FIXED CALL
+    reply = get_ai_response(user_input, history, profile, insights)
 
     return jsonify({"reply": reply})

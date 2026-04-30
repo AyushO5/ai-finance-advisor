@@ -7,7 +7,7 @@ load_dotenv()
 co = cohere.Client(os.getenv("COHERE_API_KEY"))
 
 
-def generate_ai_insights(insights, breakdown):
+def generate_ai_insights(breakdown):
 
     prompt = f"""
 You are a financial advisor analyzing expenses.
@@ -16,8 +16,6 @@ You are a financial advisor analyzing expenses.
 Expense Breakdown:
 {chr(10).join(breakdown)}
 
-Detected Patterns:
-{chr(10).join(insights)}
 ----------------------
 
 Instructions:

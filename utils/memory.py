@@ -4,18 +4,48 @@ import re
 
 MEMORY_FILE = "data/user_memory.json"
 
+def delete_chat(memory, chat_id):
+    memory["chats"] = [c for c in memory["chats"] if c["id"] != chat_id]
+
+    # if deleted chat was active → switch to another
+    if memory["current_chat_id"] == chat_id:
+        if memory["chats"]:
+            memory["current_chat_id"] = memory["chats"][0]["id"]
+        else:
+            # create new empty chat
+            new_chat = {"id": 1, "messages": []}
+            memory["chats"] = [new_chat]
+            memory["current_chat_id"] = 1
+
+    return memory
+
 def get_current_chat(memory):
+    if not memory.get("chats"):
+        return None
+
     for chat in memory["chats"]:
-        if chat["id"] == memory["current_chat_id"]:
+        if chat["id"] == memory.get("current_chat_id"):
             return chat
-    return None
+
+    # 🔥 fallback if id not found
+    return memory["chats"][0]
 
 
 def create_new_chat(memory):
-    new_id = len(memory["chats"]) + 1
-    new_chat = {"id": new_id, "messages": []}
+    if memory["chats"]:
+        max_id = max(chat["id"] for chat in memory["chats"])
+        new_id = max_id + 1
+    else:
+        new_id = 1
+
+    new_chat = {
+        "id": new_id,
+        "messages": []
+    }
+
     memory["chats"].append(new_chat)
     memory["current_chat_id"] = new_id
+
     return memory
 
 

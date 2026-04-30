@@ -15,13 +15,13 @@ def upload():
     try:
         expenses = parse_csv(file)
 
-        insights, breakdown = analyze_expenses(expenses)
-        ai_response = generate_ai_insights(insights, breakdown)
+        breakdown = analyze_expenses(expenses)  # ✅ FIXED
+
+        ai_response = generate_ai_insights(breakdown)  # ✅ FIXED
 
         return jsonify({
             "expenses": expenses,
             "breakdown": breakdown,
-            "rule_based": insights,
             "ai_insights": ai_response
         })
 

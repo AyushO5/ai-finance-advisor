@@ -1,20 +1,13 @@
 def analyze_expenses(expenses):
     total = sum(expenses.values())
 
-    insights = []
     breakdown = []
 
     for category, amount in expenses.items():
         percentage = (amount / total) * 100
-
         breakdown.append(f"{category}: ₹{amount} ({percentage:.1f}%)")
 
-        # Thresholds: >40% flags overspending, <10% flags underutilization
-        if percentage > 40:
-            insights.append(f"High spending on {category}")
-        elif percentage < 10:
-            insights.append(f"Low spending on {category}")
-        else:
-            insights.append(f"Moderate spending on {category}")
+    # 🔥 NO HARD DECISIONS HERE
+    # just return clean data
 
-    return insights, breakdown
+    return breakdown
